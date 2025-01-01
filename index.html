@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Task Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6b6bff, #ff6b6b);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .task-manager {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-sizing: border-box;
+        }
+
+        .task-manager h1 {
+            margin: 0 0 20px;
+            font-size: 26px;
+            text-align: center;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .taskbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .taskbar input[type="text"], 
+        .taskbar input[type="date"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .taskbar input[type="text"]:focus, 
+        .taskbar input[type="date"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        .taskbar button {
+            padding: 12px 20px;
+            border: none;
+            background-color: #28a745;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .taskbar button:hover {
+            background-color: #218838;
+        }
+
+        .search-bar {
+            position: relative;
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        .search-bar input {
+            width: calc(100% - 40px); /* Adjust for icon padding */
+            padding: 12px 20px 12px 40px; /* Added left padding for the icon */
+            border: 1px solid #ccc;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        .search-bar .fa-search {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #f0f0f0;
+            color: #333;
+            flex: 1;
+            margin: 0 5px;
+        }
+
+        .filter-btn.active {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .task-item .task-title {
+            font-size: 16px;
+        }
+
+        .task-item .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .task-item .actions button {
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #777;
+            display: none;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border-radius: 4px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .notification.error {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="task-manager">
+        <h1>Task Manager</h1>
+        <div class="taskbar">
+            <input type="text" id="taskInput" placeholder="Type a task...">
+            <input type="date" id="taskDate" placeholder="Due date">
+            <button onclick="addTask()">Add Task</button>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search tasks..." oninput="searchTasks()">
+            <i class="fas fa-search"></i>
+        </div>
+        <div class="filters">
+            <button class="filter-btn active" onclick="filterTasks('all')">All</button>
+            <button class="filter-btn" onclick="filterTasks('completed')">Completed</button>
+            <button class="filter-btn" onclick="filterTasks('pending')">Pending</button>
+        </div>
+        <ul class="task-list" id="taskList"></ul>
+        <div class="empty-state" id="emptyState">
+            <i class="fas fa-tasks"></i>
+            <div>No tasks to display</div>
+        </div>
+    </div>
+    <div class="notification" id="notification"></div>
+    <script>
+        const taskList = document.getElementById('taskList');
+        const taskInput = document.getElementById('taskInput');
+        const taskDate = document.getElementById('taskDate');
+        const emptyState = document.getElementById('emptyState');
+        const notification = document.getElementById('notification');
+        const searchInput = document.getElementById('searchInput');
+        let tasks = [];
+
+        function addTask() {
+            const title = taskInput.value.trim();
+            const dueDate = taskDate.value;
+            if (!title) {
+                showNotification('Task cannot be empty', 'error');
+                return;
+            }
+            const task = { id: Date.now(), title, dueDate, completed: false };
+            tasks.push(task);
+            taskInput.value = '';
+            taskDate.value = '';
+            renderTasks();
+        }
+
+        function renderTasks(filter = 'all', search = '') {
+            taskList.innerHTML = '';
+            const filteredTasks = tasks.filter(task => {
+                const matchesFilter = filter === 'all' || (filter === 'completed' ? task.completed : !task.completed);
+                const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
+                return matchesFilter && matchesSearch;
+            });
+
+            if (filteredTasks.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                filteredTasks.forEach(task => {
+                    const taskItem = document.createElement('li');
+                    taskItem.className = 'task-item';
+                    taskItem.innerHTML = `
+                        <span class="task-title">${task.title} <br> <small>Due: ${task.dueDate || 'No date set'}</small></span>
+                        <div class="actions">
+                            <button onclick="toggleTask(${task.id})"><i class="fas fa-${task.completed ? 'undo' : 'check-circle'}"></i></button>
+                            <button onclick="deleteTask(${task.id})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                    taskList.appendChild(taskItem);
+                });
+            }
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(task => task.id === id);
+            task.completed = !task.completed;
+            renderTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            renderTasks();
+        }
+
+        function filterTasks(filter) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.filter-btn[onclick="filterTasks('${filter}')"]`).classList.add('active');
+            renderTasks(filter, searchInput.value);
+        }
+
+        function searchTasks() {
+            const searchValue = searchInput.value.trim();
+            renderTasks('all', searchValue);
+        }
+
+        function showNotification(message, type) {
+            notification.textContent = message;
+            notification.className = 'notification ' + (type === 'error' ? 'error' : '');
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
